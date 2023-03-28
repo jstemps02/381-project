@@ -1,0 +1,164 @@
+-------------------------------------------------------------------------
+-- Jacob Lyons jplyons1
+-------------------------------------------------------------------------
+
+
+-- barrelShift.vhd
+-------------------------------------------------------------------------
+-- DESCRIPTION: This file contains a structural VHDL implementation of a 
+-- right barrel shifter, enabling use of both arithmetic and logical 
+-- shifting operations.
+-------------------------------------------------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+
+entity barrelShift is
+
+  port(i_S	: in std_logic_vector(4 downto 0);	--Selects how much to shift
+       i_Left   : in std_logic;				--0 for right, 1 for left
+       i_Op	: in std_logic;				--0 for logical, 1 for arithmetic shifting
+       i_In     : in std_logic_vector(31 downto 0);	--Value input before shifting
+       o_Out    : out std_logic_vector(31 downto 0));	--Value output after shifting
+
+end barrelShift;
+
+architecture structural of barrelShift is
+
+  signal Flip1, A, B, C, D, E, Flip2: std_logic_vector(31 downto 0);	--Intermediate values between muxes
+
+  component mux2t1 is
+
+  port(i_S      : in std_logic;
+       i_D0     : in std_logic;
+       i_D1     : in std_logic;
+       o_O      : out std_logic);
+
+  end component;
+
+begin
+
+  Flip1_mux2t1: for i in 0 to 31 generate		--Flips the input to shift left if need be
+    REG1: mux2t1 port map(
+
+        i_S          => i_Left,
+	i_D0         => i_In(i),
+        i_D1         => i_In(31-i),
+        o_O	     => Flip1(i));
+  end generate Flip1_mux2t1;
+
+  A_mux2t1: for i in 0 to 30 generate			--First layer of muxes
+    REG1: mux2t1 port map(
+
+        i_S          => i_S(0),
+	i_D0         => Flip1(i),
+        i_D1         => Flip1(i+1),
+        o_O	     => A(i));
+  end generate A_mux2t1;
+
+  A0_mux2t1: mux2t1 port map(				--Zeroes on first layer of muxes
+
+	i_S          => i_S(0),
+	i_D0         => Flip1(31),
+        i_D1         => '0',
+        o_O	     => A(31));	
+
+  B_mux2t1: for i in 0 to 29 generate			--Second layer of muxes
+    REG2: mux2t1 port map(
+
+        i_S          => i_S(1),
+	i_D0         => A(i),
+        i_D1         => A(i+2),
+        o_O	     => B(i));
+  end generate B_mux2t1;
+
+  B0_mux2t1: for i in 30 to 31 generate			--Zeroes on second layer of muxes
+    REG3: mux2t1 port map(
+
+        i_S          => i_S(1),
+	i_D0         => A(i),
+        i_D1         => '0',
+        o_O	     => B(i));
+  end generate B0_mux2t1;
+
+  C_mux2t1: for i in 0 to 27 generate			--Third layer of muxes
+    REG4: mux2t1 port map(
+
+        i_S          => i_S(2),
+	i_D0         => B(i),
+        i_D1         => B(i+4),
+        o_O	     => C(i));
+  end generate C_mux2t1;
+
+  C0_mux2t1: for i in 28 to 31 generate			--Zeroes on third layer of muxes
+    REG5: mux2t1 port map(
+
+        i_S          => i_S(2),
+	i_D0         => B(i),
+        i_D1         => '0',
+        o_O	     => C(i));
+  end generate C0_mux2t1;
+
+  D_mux2t1: for i in 0 to 23 generate			--Fourth layer of muxes
+    REG6: mux2t1 port map(
+
+        i_S          => i_S(3),
+	i_D0         => C(i),
+        i_D1         => C(i+8),
+        o_O	     => D(i));
+  end generate D_mux2t1;
+
+  D0_mux2t1: for i in 24 to 31 generate			--Zeroes on fourth layer of muxes
+    REG7: mux2t1 port map(
+
+        i_S          => i_S(3),
+	i_D0         => C(i),
+        i_D1         => '0',
+        o_O	     => D(i));
+  end generate D0_mux2t1;
+
+  E_mux2t1: for i in 0 to 15 generate			--Last layer of muxes after first index
+    REG8: mux2t1 port map(
+
+        i_S          => i_S(4),
+	i_D0         => D(i),
+        i_D1         => D(i+16),
+        o_O	     => E(i));
+  end generate E_mux2t1;
+
+  E0_mux2t1: for i in 16 to 31 generate			--Zeroes on last layer of muxes
+    REG9: mux2t1 port map(
+
+        i_S          => i_S(4),
+	i_D0         => D(i),
+        i_D1         => '0',
+        o_O	     => E(i));
+  end generate E0_mux2t1;
+
+  Flip2_mux2t1: for i in 0 to 31 generate		--Flips the input back if shifted left
+    REG1: mux2t1 port map(
+
+        i_S          => i_Left,
+	i_D0         => E(i),
+        i_D1         => E(31-i),
+        o_O	     => Flip2(i));
+  end generate Flip2_mux2t1;
+
+  E_shift_type_mux2t1: mux2t1 port map(			--Mux to select logical or arithmetic
+
+	i_S          => i_Op,
+	i_D0         => o_Flip2(31),
+        i_D1         => i_In(31),
+        o_O	     => o_Out(31));
+
+  SetOut_mux2t1: for i in 0 to 30 generate		--Set the output for the rest of the indices
+    REG1: mux2t1 port map(
+
+        i_S          => '0',
+	i_D0         => Flip2(i),
+        i_D1         => Flip2(i),
+        o_O	     => o_Out(i));
+  end generate SetOut_mux2t1;
+	
+  
+end structural;

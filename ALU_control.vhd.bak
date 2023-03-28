@@ -1,0 +1,72 @@
+-------------------------------------------------------------------------
+-- Justin Templeton
+-------------------------------------------------------------------------
+
+
+-- ALU_control.vhd
+-------------------------------------------------------------------------
+-- DESCRIPTION: This file represents a control block for a single cycle MIPS processor
+--
+--
+-------------------------------------------------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+
+entity ALU_control is
+
+  port(i_InstLo       : in std_logic_vector(5 downto 0);     -- Instruction Input
+       o_Inst       : in std_logic_vector(5 downto 0);     -- Value from Control Block (bits 31 to 26)
+       ALUEN        : in std_logic;     -- 1 if R-type, 0 when taking from Imm
+       ALUOp        : out std_logic_vector(12 downto 0));     -- Signal sent to ALU
+
+end ALU_control;
+
+
+
+architecture mixed of ALU_control is
+
+signal operator : std_logic_vector(5 downto 0); 
+
+begin
+with ALUEN select
+	operator <= i_InstLo when '1',
+	o_Inst when others;
+
+
+
+r_IF_ALUOP : process (operator) is
+begin
+   if operator = b"100000" then --add/addi
+   ALUOp <= b"1010000000000";
+   elsif operator = b"100001" then  --addu/addiu
+   ALUOp <= b"1000000000000";
+   elsif operator = b"100100" then --and/andi
+   ALUOP <= b"0000000100000";
+   elsif operator = b"100100" then --not
+   ALUOP <= b"0001000000000";
+   elsif operator = b"100111" then --nor
+   ALUOP <= b"0000001000000";
+   elsif operator = b"100110" then --xor/xori
+   ALUOP <= b"0000010000000";
+   elsif operator = b"100101" then --or/ori
+   ALUOP <= b"0000100000000";
+   elsif operator = b"100010" then --sub
+   ALUOP <= b"0000010000000";
+   elsif operator = b"000000" then --sll
+   ALUOP <= b"0000000010000";
+   elsif operator = b"000010" then --srl
+   ALUOP <= b"0000000001000";
+   elsif operator = b"000011" then --sra
+   ALUOP <= b"0000000000100";
+   elsif operator = b"000011" then --lui
+   ALUOP <= b"0000000000010";
+   elsif operator = b"101011" then --sw
+   ALUOP <= b"1000000000000";
+   elsif operator = b"100011" then --lw
+   ALUOP <= b"1000000000000";
+
+     end if;
+  end process r_IF_ALUOP;
+  
+end mixed;
